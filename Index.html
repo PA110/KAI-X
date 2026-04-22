@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KAI-X Demo Video</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a1a; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+  canvas { border-radius: 16px; box-shadow: 0 0 60px #6c63ff55; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+c.width = 640; c.height = 360;
+
+let t = 0;
+const DUR = 300; // 5s per phase at 60fps
+
+// Particles
+const particles = Array.from({length: 60}, () => ({
+  x: Math.random()*640, y: Math.random()*360,
+  vx: (Math.random()-.5)*.6, vy: (Math.random()-.5)*.6,
+  r: Math.random()*2+.5, a: Math.random()
+}));
+
+// Neural net nodes
+const nodes = [
+  {x:100,y:180},{x:180,y:120},{x:180,y:240},{x:280,y:90},
+  {x:280,y:180},{x:280,y:270},{x:380,y:150},{x:380,y:210},{x:460,y:180}
+];
+const edges = [
+  [0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[3,6],[4,6],[4,7],[5,7],[6,8],[7,8]
+];
+
+function ease(x) { return x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2; }
+function lerp(a,b,t){ return a+(b-a)*t; }
+function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+function phase(start,dur){ return clamp((t-start)/dur,0,1); }
+
+function drawBG() {
+  const g = ctx.createRadialGradient(320,180,0,320,180,400);
+  g.addColorStop(0,'#0f0f2e'); g.addColorStop(1,'#050510');
+  ctx.fillStyle = g; ctx.fillRect(0,0,640,360);
+}
+
+function drawParticles(alpha) {
+  particles.forEach(p => {
+    p.x+=p.vx; p.y+=p.vy;
+    if(p.x<0)p.x=640; if(p.x>640)p.x=0;
+    if(p.y<0)p.y=360; if(p.y>360)p.y=0;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle = `rgba(108,99,255,${p.a*alpha*.4})`;
+    ctx.fill();
+  });
+}
+
+function drawLogo(alpha) {
+  const s = ease(alpha);
+  ctx.save();
+  ctx.globalAlpha = s;
+  ctx.translate(320,180);
+  ctx.scale(.6+s*.4,.6+s*.4);
+  // Glow
+  ctx.shadowColor='#6c63ff'; ctx.shadowBlur=40+Math.sin(t*.05)*10;
+  ctx.font='bold 72px monospace';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const lg = ctx.createLinearGradient(-150,0,150,0);
+  lg.addColorStop(0,'#a78bfa'); lg.addColorStop(1,'#38bdf8');
+  ctx.fillStyle=lg; ctx.fillText('KAI-X',0,0);
+  ctx.shadowBlur=0;
+  ctx.font='14px monospace'; ctx.fillStyle='#8888aa';
+  ctx.fillText('INTELLIGENT AGENT FRAMEWORK',0,48);
+  ctx.restore();
+}
+
+function bubble(x,y,w,h,r,col,text,small,alpha) {
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r); ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r); ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r); ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r); ctx.closePath();
+  ctx.fillStyle=col; ctx.fill();
+  ctx.fillStyle='#eef'; ctx.font=(small?'11px':'13px')+' monospace';
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText(text,x+12,y+h/2);
+  ctx.restore();
+}
+
+function drawChat(alpha) {
+  const a1=ease(clamp((alpha-.0)/.3,0,1));
+  const a2=ease(clamp((alpha-.35)/.35,0,1));
+  const a3=ease(clamp((alpha-.7)/.3,0,1));
+  drawBubbleLabel('YOU',50,70,a1);
+  bubble(50,88,280,40,10,'#1e3a5f','> Build me a quick game',false,a1);
+  drawBubbleLabel('KAI-X',50,140,a2);
+  bubble(50,158,520,70,10,'#1a0a3e','const game = new KaiXEngine();',false,a2);
+  bubble(50,174,520,54,10,'#1a0a3e','  game.addSprite("hero").setAI()',true,a2*.9);
+  drawBubbleLabel('✓ Generated in 0.3s',50,240,a3);
+  ctx.save(); ctx.globalAlpha=a3;
+  ctx.fillStyle='#34d399'; ctx.font='12px monospace';
+  ctx.fillText('▶ Running...',50,258); ctx.restore();
+}
+
+function drawBubbleLabel(txt,x,y,alpha) {
+  ctx.save(); ctx.globalAlpha=alpha;
+  ctx.fillStyle='#6c63ff'; ctx.font='bold 10px monospace';
+  ctx.textAlign='left'; ctx.fillText(txt,x,y); ctx.restore();
+}
+
+function drawNeural(alpha) {
+  const flow = (t%60)/60;
+  edges.forEach(([a,b],i) => {
+    const na=nodes[a],nb=nodes[b];
+    const delay = (i/edges.length);
+    const lit = clamp((alpha-.1-delay*.3)/.3,0,1);
+    ctx.beginPath(); ctx.moveTo(na.x,na.y); ctx.lineTo(nb.x,nb.y);
+    ctx.strokeStyle=`rgba(108,99,255,${lit*.5})`; ctx.lineWidth=1.5; ctx.stroke();
+    // Traveling dot
+    const p=(flow+delay)%1;
+    const dx=nb.x-na.x, dy=nb.y-na.y;
+    ctx.beginPath();
+    ctx.arc(na.x+dx*p,na.y+dy*p,2.5,0,Math.PI*2);
+    ctx.fillStyle=`rgba(56,189,248,${lit})`; ctx.fill();
+  });
+  nodes.forEach((n,i) => {
+    const lit=ease(clamp((alpha-.05-(i/nodes.length)*.4)/.3,0,1));
+    ctx.beginPath(); ctx.arc(n.x,n.y,8,0,Math.PI*2);
+    ctx.fillStyle=`rgba(108,99,255,${.2*lit})`; ctx.fill();
+    ctx.beginPath(); ctx.arc(n.x,n.y,8,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(167,139,250,${lit})`; ctx.lineWidth=2; ctx.stroke();
+    ctx.beginPath(); ctx.arc(n.x,n.y,3,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${lit})`; ctx.fill();
+  });
+  // Label
+  ctx.save(); ctx.globalAlpha=ease(clamp((alpha-.3)/.3,0,1));
+  ctx.fillStyle='#a78bfa'; ctx.font='bold 13px monospace';
+  ctx.textAlign='center'; ctx.fillText('Neural Processing...',320,320); ctx.restore();
+}
+
+function drawSprite(alpha) {
+  const jump = Math.abs(Math.sin(t*.08))*40;
+  const s = ease(alpha);
+  ctx.save(); ctx.globalAlpha=s; ctx.translate(320,220-jump*s);
+  // Shadow
+  ctx.beginPath(); ctx.ellipse(0,80,28*s,6,0,0,Math.PI*2);
+  ctx.fillStyle='rgba(0,0,0,.3)'; ctx.fill();
+  // Body
+  ctx.fillStyle='#6c63ff';
+  ctx.fillRect(-16,-30,32,36);
+  // Head
+  const hg=ctx.createRadialGradient(0,-46,4,0,-46,18);
+  hg.addColorStop(0,'#a78bfa'); hg.addColorStop(1,'#6c63ff');
+  ctx.fillStyle=hg; ctx.beginPath(); ctx.arc(0,-44,18,0,Math.PI*2); ctx.fill();
+  // Eyes
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(-7,-44,5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(7,-44,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#38bdf8'; ctx.beginPath(); ctx.arc(-7,-44,2.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(7,-44,2.5,0,Math.PI*2); ctx.fill();
+  // Arms
+  ctx.fillStyle='#a78bfa';
+  ctx.fillRect(-28,-20,14,10); ctx.fillRect(14,-20,14,10);
+  // Glow ring
+  ctx.shadowColor='#6c63ff'; ctx.shadowBlur=20;
+  ctx.strokeStyle='#a78bfa'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.arc(0,-44,22,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+}
+
+function drawOverlay(alpha) {
+  const s = ease(alpha);
+  ctx.save(); ctx.globalAlpha=s;
+  // Badge
+  const g=ctx.createLinearGradient(140,150,500,210);
+  g.addColorStop(0,'rgba(108,99,255,.15)'); g.addColorStop(1,'rgba(56,189,248,.15)');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.roundRect(140,155,360,55,12); ctx.fill();
+  ctx.strokeStyle='rgba(108,99,255,.5)'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.roundRect(140,155,360,55,12); ctx.stroke();
+  ctx.shadowColor='#6c63ff'; ctx.shadowBlur=15;
+  ctx.font='bold 22px monospace'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  const tg=ctx.createLinearGradient(0,0,640,0);
+  tg.addColorStop(0,'#a78bfa'); tg.addColorStop(1,'#38bdf8');
+  ctx.fillStyle=tg; ctx.fillText('Working AI Agent — Live Demo',320,183);
+  ctx.shadowBlur=0; ctx.font='11px monospace'; ctx.fillStyle='#667';
+  ctx.fillText('github.com/PA110/KAI-X',320,205);
+  ctx.restore();
+}
+
+function draw() {
+  const total = DUR*6;
+  const frame = t % total;
+  const p = frame/DUR;
+
+  drawBG();
+  drawParticles(1);
+
+  if(p<1)      { drawLogo(ease(p<.5?p*2:1)); }
+  else if(p<2) { drawLogo(ease(clamp(2-p,0,1)*.5+.5)); drawChat(p-1); }
+  else if(p<3) { drawNeural(p-2); }
+  else if(p<4) { drawSprite(p-3); }
+  else if(p<5) { drawSprite(1); drawOverlay(p-4); }
+  else         { drawOverlay(1); drawLogo(ease((p-5)*.8)); }
+
+  t++;
+  requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
