@@ -1,0 +1,180 @@
+/* app/globals.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Google Fonts ─────────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ── CSS Variables ────────────────────────────────────────────────────────── */
+:root {
+  --font-display: 'Orbitron', monospace;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+
+  --color-void: #020408;
+  --color-surface: rgba(10, 16, 28, 0.85);
+  --color-border: rgba(56, 189, 248, 0.15);
+  --color-border-hover: rgba(56, 189, 248, 0.4);
+
+  /* Neon palette */
+  --neon-cyan:   #38bdf8;
+  --neon-purple: #a78bfa;
+  --neon-green:  #34d399;
+  --neon-orange: #fb923c;
+  --neon-pink:   #f472b6;
+
+  /* Glassmorphism */
+  --glass-bg:     rgba(2, 6, 18, 0.7);
+  --glass-border: rgba(56, 189, 248, 0.12);
+  --glass-blur:   12px;
+}
+
+/* ── Base reset ───────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: var(--color-void);
+  color: #e2e8f0;
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+}
+
+/* ── Glass panel utility ──────────────────────────────────────────────────── */
+@layer components {
+  .glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(var(--glass-blur));
+    -webkit-backdrop-filter: blur(var(--glass-blur));
+    border: 1px solid var(--glass-border);
+  }
+
+  .glass-hover {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .glass-hover:hover {
+    border-color: var(--color-border-hover);
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+  }
+
+  /* Neon glow button */
+  .btn-neon {
+    @apply relative px-4 py-2 rounded-lg font-mono text-sm font-bold tracking-wider;
+    @apply text-cyan-400 border border-cyan-500/30;
+    @apply transition-all duration-200;
+    @apply glass;
+  }
+  .btn-neon:hover {
+    @apply border-cyan-400/70 text-cyan-300;
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.3), inset 0 0 16px rgba(56, 189, 248, 0.05);
+  }
+  .btn-neon:active {
+    @apply scale-95;
+  }
+  .btn-neon:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+
+  /* Neon input */
+  .input-neon {
+    @apply glass px-4 py-3 rounded-xl w-full;
+    @apply text-slate-100 placeholder-slate-500 font-mono text-sm;
+    @apply border border-cyan-900/40 outline-none;
+    @apply transition-all duration-200;
+    caret-color: var(--neon-cyan);
+  }
+  .input-neon:focus {
+    @apply border-cyan-500/50;
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.15);
+  }
+
+  /* Text gradient */
+  .text-glow-cyan {
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+  }
+  .text-glow-purple {
+    color: var(--neon-purple);
+    text-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
+  }
+
+  /* Loading spinner */
+  .spinner {
+    border: 2px solid rgba(56, 189, 248, 0.2);
+    border-top-color: var(--neon-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+}
+
+/* ── Star field background ────────────────────────────────────────────────── */
+.star-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(56,189,248,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 70%, rgba(167,139,250,0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 50%, #050c18 0%, #020408 100%);
+}
+
+/* ── Animations ───────────────────────────────────────────────────────────── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1);    opacity: 0.8; }
+  100% { transform: scale(1.8);  opacity: 0; }
+}
+
+@keyframes scan-line {
+  0%   { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes data-stream {
+  0%   { opacity: 0; transform: translateY(-10px); }
+  20%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+
+/* ── Three.js canvas ──────────────────────────────────────────────────────── */
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* ── Toast customization ──────────────────────────────────────────────────── */
+.toast-neon {
+  background: rgba(2, 6, 18, 0.95) !important;
+  border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  color: #e2e8f0 !important;
+  font-family: var(--font-mono) !important;
+  font-size: 13px !important;
+  backdrop-filter: blur(12px) !important;
+}
